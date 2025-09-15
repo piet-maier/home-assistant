@@ -23,6 +23,7 @@ async def async_setup_entry(
 class AbfallCalendar(CoordinatorEntity[AbfallCoordinator], CalendarEntity):
     _attr_has_entity_name = True
     _attr_name = "RSAG Abfallkalender"
+    _attr_unique_id = "rsag-abfallkalender"
 
     def __init__(self, coordinator: AbfallCoordinator):
         super().__init__(coordinator)
