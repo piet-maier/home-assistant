@@ -14,6 +14,10 @@ class AbfallConfigFlow(ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             return self.async_create_entry(title="Abfall", data=user_input)
 
+        await self.async_set_unique_id(DOMAIN)
+
+        self._abort_if_unique_id_configured()
+
         return self.async_show_form(
             step_id="user",
             data_schema=voluptuous.Schema({voluptuous.Required("street"): int}),

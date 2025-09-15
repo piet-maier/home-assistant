@@ -10,6 +10,9 @@
           "street": "The street ID is used by the RSAG API to uniquely identify your street."
         }
       }
+    },
+    "abort": {
+      "already_configured": "The service is already configured."
     }
   }
 }
