@@ -7,15 +7,14 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.util.dt import now
 
+from .const import DOMAIN
 from .coordinator import AbfallCoordinator
 
 
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ):
-    coordinator = AbfallCoordinator(hass, entry)
-
-    await coordinator.async_config_entry_first_refresh()
+    coordinator = hass.data[DOMAIN][entry.entry_id]
 
     async_add_entities([AbfallCalendar(coordinator)])
 
