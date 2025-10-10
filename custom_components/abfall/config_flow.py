@@ -3,7 +3,7 @@ import typing
 import voluptuous
 from homeassistant.config_entries import ConfigFlow
 
-from . import DOMAIN
+from .const import DOMAIN
 
 
 class AbfallConfigFlow(ConfigFlow, domain=DOMAIN):
