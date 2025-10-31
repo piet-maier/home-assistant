@@ -39,6 +39,9 @@ class AbfallCoordinator(DataUpdateCoordinator[list[CalendarEvent]]):
 
             result: list[CalendarEvent] = []
 
+            if not data:
+                return result
+
             for item in data[0]["items"]:
                 date = datetime.date.fromisoformat(item["pickupdate"])
 
