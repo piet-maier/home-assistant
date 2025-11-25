@@ -1,0 +1,6 @@
+{
+  "domain": "thermostat",
+  "name": "Thermostat",
+  "version": "0.1.0",
+  "integration_type": "hub"
+}
