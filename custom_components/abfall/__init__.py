@@ -1,7 +1,9 @@
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
+from .client.rsag import RSAG
 from .const import DOMAIN
 from .coordinator import AbfallCoordinator
 
@@ -9,7 +11,9 @@ PLATFORMS = [Platform.CALENDAR, Platform.SENSOR]
 
 
 async def async_setup_entry(hass: HomeAssistant, config_entry: ConfigEntry):
-    coordinator = AbfallCoordinator(hass, config_entry)
+    coordinator = AbfallCoordinator(
+        hass, config_entry, RSAG(async_get_clientsession(hass))
+    )
 
     hass.data[DOMAIN] = {config_entry.entry_id: coordinator}
 
