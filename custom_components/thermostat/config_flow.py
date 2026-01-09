@@ -8,7 +8,7 @@ from homeassistant.helpers.selector import (
     EntitySelectorConfig,
 )
 
-from . import DOMAIN
+from .const import DOMAIN, SENSOR
 
 
 class ThermostatConfigFlow(ConfigFlow, domain=DOMAIN):
@@ -28,6 +28,9 @@ class ThermostatConfigFlow(ConfigFlow, domain=DOMAIN):
                         EntitySelectorConfig(
                             domain=Platform.CLIMATE, multiple=True, reorder=True
                         )
+                    ),
+                    SENSOR: EntitySelector(
+                        EntitySelectorConfig(domain=Platform.SENSOR)
                     ),
                 }
             ),
