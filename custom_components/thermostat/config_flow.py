@@ -1,6 +1,7 @@
 import typing
 
 import voluptuous
+from homeassistant.components.sensor.const import SensorDeviceClass
 from homeassistant.config_entries import ConfigFlow
 from homeassistant.const import CONF_ENTITIES, CONF_NAME, Platform
 from homeassistant.helpers.selector import (
@@ -8,7 +9,7 @@ from homeassistant.helpers.selector import (
     EntitySelectorConfig,
 )
 
-from . import DOMAIN
+from .const import DOMAIN, SENSOR
 
 
 class ThermostatConfigFlow(ConfigFlow, domain=DOMAIN):
@@ -27,6 +28,12 @@ class ThermostatConfigFlow(ConfigFlow, domain=DOMAIN):
                     voluptuous.Required(CONF_ENTITIES): EntitySelector(
                         EntitySelectorConfig(
                             domain=Platform.CLIMATE, multiple=True, reorder=True
+                        )
+                    ),
+                    SENSOR: EntitySelector(
+                        EntitySelectorConfig(
+                            domain=Platform.SENSOR,
+                            device_class=SensorDeviceClass.TEMPERATURE,
                         )
                     ),
                 }
