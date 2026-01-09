@@ -1,7 +1,7 @@
 {
   "domain": "thermostat",
   "name": "Thermostat",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "integration_type": "hub",
   "config_flow": true,
   "iot_class": "calculated"
