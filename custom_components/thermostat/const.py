@@ -1,0 +1,3 @@
+DOMAIN = "thermostat"
+
+SENSOR = "sensor"

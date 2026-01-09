@@ -1,3 +1,4 @@
+import logging
 import typing
 
 from homeassistant.components.climate import ClimateEntity
@@ -20,6 +21,8 @@ from homeassistant.components.climate.const import (
 )
 from homeassistant.components.group.entity import GroupEntity
 from homeassistant.components.group.util import find_state_attributes, reduce_attribute
+from homeassistant.components.number.const import ATTR_VALUE, SERVICE_SET_VALUE
+from homeassistant.components.number.const import DOMAIN as NUMBER_DOMAIN
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     ATTR_ENTITY_ID,
@@ -31,15 +34,28 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
 )
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import Event, EventStateChangedData, HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.entity_registry import async_get
+from homeassistant.helpers.event import async_track_state_change_event
+
+from .const import SENSOR
+
+_LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ):
     async_add_entities(
-        [ThermostatEntity(hass, entry.data[CONF_NAME], entry.data[CONF_ENTITIES])]
+        [
+            ThermostatEntity(
+                hass,
+                entry.data[CONF_NAME],
+                entry.data[CONF_ENTITIES],
+                entry.data.get(SENSOR),
+            )
+        ]
     )
 
 
@@ -54,7 +70,9 @@ class ThermostatEntity(GroupEntity, ClimateEntity):
 
     _attr_hvac_modes = [HVACMode.OFF, HVACMode.HEAT]
 
-    def __init__(self, hass: HomeAssistant, name: str, entities: list[str]):
+    def __init__(
+        self, hass: HomeAssistant, name: str, entities: list[str], sensor: str | None
+    ):
         self.hass = hass
 
         self._attr_name = name
@@ -62,6 +80,63 @@ class ThermostatEntity(GroupEntity, ClimateEntity):
         self._entity_ids = entities
 
         self._attr_temperature_unit = self.hass.config.units.temperature_unit
+
+        self._sensor_id = sensor
+
+    async def async_added_to_hass(self):
+        await super().async_added_to_hass()
+
+        if self._sensor_id is None:
+            return
+
+        self.async_on_remove(
+            async_track_state_change_event(
+                self.hass, self._sensor_id, self._async_sensor_state_change
+            )
+        )
+
+    @callback
+    async def _async_sensor_state_change(
+        self, state_change: Event[EventStateChangedData]
+    ):
+        if state_change.data["new_state"] is None:
+            return
+
+        sensor_state = state_change.data["new_state"].state
+
+        if sensor_state in [STATE_UNAVAILABLE, STATE_UNKNOWN]:
+            return
+
+        sensor_value = float(sensor_state)
+
+        _LOGGER.info(
+            'Setting external_temperature_input of "%s" to %.1f %s...',
+            self._attr_name,
+            sensor_value,
+            self._attr_temperature_unit,
+        )
+
+        registry = async_get(self.hass)
+
+        for group_entity in map(registry.async_get, self._entity_ids):
+            if group_entity is None or group_entity.device_id is None:
+                continue
+
+            for entity in registry.entities.values():
+                if (
+                    group_entity.device_id != entity.device_id
+                    or entity.domain != NUMBER_DOMAIN
+                    or "external_temperature_input" not in entity.entity_id
+                ):
+                    continue
+
+                await self.hass.services.async_call(
+                    NUMBER_DOMAIN,
+                    SERVICE_SET_VALUE,
+                    {ATTR_ENTITY_ID: entity.entity_id, ATTR_VALUE: sensor_value},
+                    True,
+                    self._context,
+                )
 
     @callback
     def async_update_group_state(self):

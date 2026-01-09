@@ -5,7 +5,8 @@
         "title": "Create Thermostat",
         "data": {
           "name": "Name",
-          "entities": "Entities"
+          "entities": "Entities",
+          "sensor": "Temperature Sensor"
         }
       }
     }
