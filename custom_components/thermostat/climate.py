@@ -51,6 +51,7 @@ async def async_setup_entry(
         [
             ThermostatEntity(
                 hass,
+                entry.entry_id,
                 entry.data[CONF_NAME],
                 entry.data[CONF_ENTITIES],
                 entry.data.get(SENSOR),
@@ -71,11 +72,17 @@ class ThermostatEntity(GroupEntity, ClimateEntity):
     _attr_hvac_modes = [HVACMode.OFF, HVACMode.HEAT]
 
     def __init__(
-        self, hass: HomeAssistant, name: str, entities: list[str], sensor: str | None
+        self,
+        hass: HomeAssistant,
+        entry_id: str,
+        name: str,
+        entities: list[str],
+        sensor: str | None,
     ):
         self.hass = hass
 
         self._attr_name = name
+        self._attr_unique_id = entry_id
 
         self._entity_ids = entities
 
