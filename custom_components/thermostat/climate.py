@@ -1,3 +1,5 @@
+import collections.abc
+import datetime
 import logging
 import typing
 
@@ -34,10 +36,15 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
 )
-from homeassistant.core import Event, EventStateChangedData, HomeAssistant, callback
+from homeassistant.core import (
+    Event,
+    EventStateChangedData,
+    HomeAssistant,
+    callback,
+)
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.entity_registry import async_get
-from homeassistant.helpers.event import async_track_state_change_event
+from homeassistant.helpers.event import async_call_later, async_track_state_change_event
 
 from .const import SENSOR
 
@@ -90,6 +97,8 @@ class ThermostatEntity(GroupEntity, ClimateEntity):
 
         self._sensor_id = sensor
 
+        self._sensor_callable: collections.abc.Callable[[], None] | None = None
+
     async def async_added_to_hass(self):
         await super().async_added_to_hass()
 
@@ -103,22 +112,34 @@ class ThermostatEntity(GroupEntity, ClimateEntity):
         )
 
     async def _async_sensor_state_change(
-        self, state_change: Event[EventStateChangedData]
+        self, state_change: Event[EventStateChangedData] | None = None
     ):
-        if state_change.data["new_state"] is None:
+        if self._sensor_callable is not None:
+            self._sensor_callable()
+
+        if self._sensor_id is None:
             return
 
-        sensor_state = state_change.data["new_state"].state
+        state_object = (
+            state_change.data["new_state"]
+            if state_change is not None
+            else self.hass.states.get(self._sensor_id)
+        )
 
-        if sensor_state in [STATE_UNAVAILABLE, STATE_UNKNOWN]:
+        if state_object is None:
             return
 
-        sensor_value = float(sensor_state)
+        state_string = state_object.state
+
+        if state_string in [STATE_UNAVAILABLE, STATE_UNKNOWN]:
+            return
+
+        state_number = float(state_string)
 
         _LOGGER.info(
             'Setting external_temperature_input of "%s" to %.1f %s...',
             self._attr_name,
-            sensor_value,
+            state_number,
             self._attr_temperature_unit,
         )
 
@@ -139,10 +160,16 @@ class ThermostatEntity(GroupEntity, ClimateEntity):
                 await self.hass.services.async_call(
                     NUMBER_DOMAIN,
                     SERVICE_SET_VALUE,
-                    {ATTR_ENTITY_ID: entity.entity_id, ATTR_VALUE: sensor_value},
+                    {ATTR_ENTITY_ID: entity.entity_id, ATTR_VALUE: state_number},
                     True,
                     self._context,
                 )
+
+        self._sensor_callable = async_call_later(
+            self.hass,
+            datetime.timedelta(minutes=15),
+            lambda _: self._async_sensor_state_change(),
+        )
 
     @callback
     def async_update_group_state(self):
