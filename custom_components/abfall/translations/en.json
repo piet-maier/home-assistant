@@ -4,19 +4,15 @@
       "user": {
         "title": "RSAG API Configuration",
         "data": {
-          "street": "Street ID"
-        },
-        "data_description": {
-          "street": "The street ID is used by the RSAG API to uniquely identify your street."
+          "city": "City Name",
+          "street": "Street Name"
         }
       },
       "reconfigure": {
         "title": "RSAG API Configuration",
         "data": {
-          "street": "Street ID"
-        },
-        "data_description": {
-          "street": "The street ID is used by the RSAG API to uniquely identify your street."
+          "city": "City Name",
+          "street": "Street Name"
         }
       }
     }
