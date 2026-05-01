@@ -5,7 +5,9 @@ from homeassistant.config_entries import ConfigFlow
 
 from .const import DOMAIN
 
-SCHEMA = voluptuous.Schema({voluptuous.Required("street"): int})
+SCHEMA = voluptuous.Schema(
+    {voluptuous.Required("city"): str, voluptuous.Required("street"): str}
+)
 
 
 class AbfallConfigFlow(ConfigFlow, domain=DOMAIN):

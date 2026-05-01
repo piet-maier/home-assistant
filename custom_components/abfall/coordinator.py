@@ -29,4 +29,6 @@ class AbfallCoordinator(DataUpdateCoordinator[list[CalendarEvent]]):
         if self.config_entry is None:
             raise TypeError("The configuration entry must not be None.")
 
-        return await self.client.fetch_data(self.config_entry.data["street"])
+        return await self.client.fetch_data(
+            self.config_entry.data["city"], self.config_entry.data["street"]
+        )
