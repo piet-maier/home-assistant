@@ -111,6 +111,14 @@ class ThermostatEntity(GroupEntity, ClimateEntity):
     async def _async_sensor_state_change(
         self, state_change: Event[EventStateChangedData] | None = None
     ):
+        """This method sets the `external_temperature_input` value of all devices in the group.
+
+        It is called when the value of the sensor entity referenced by `self._sensor_id` changes or 15 minutes have passed since its last invocation.
+
+        Args:
+            state_change:
+                This is the state change event, or `None` if the method was called as a keep-alive.
+        """
         if self._sensor_callable is not None:
             self._sensor_callable()
 
