@@ -39,3 +39,31 @@ class ThermostatConfigFlow(ConfigFlow, domain=DOMAIN):
                 }
             ),
         )
+
+    async def async_step_reconfigure(
+        self, user_input: dict[str, typing.Any] | None = None
+    ):
+        if user_input is not None:
+            return self.async_update_reload_and_abort(
+                self._get_reconfigure_entry(), data_updates=user_input
+            )
+
+        return self.async_show_form(
+            step_id="reconfigure",
+            data_schema=voluptuous.Schema(
+                {
+                    CONF_NAME: str,
+                    CONF_ENTITIES: EntitySelector(
+                        EntitySelectorConfig(
+                            domain=Platform.CLIMATE, multiple=True, reorder=True
+                        )
+                    ),
+                    SENSOR: EntitySelector(
+                        EntitySelectorConfig(
+                            domain=Platform.SENSOR,
+                            device_class=SensorDeviceClass.TEMPERATURE,
+                        )
+                    ),
+                }
+            ),
+        )

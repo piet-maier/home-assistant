@@ -8,6 +8,14 @@
           "entities": "Entities",
           "sensor": "Temperature Sensor"
         }
+      },
+      "reconfigure": {
+        "title": "Create Thermostat",
+        "data": {
+          "name": "Name",
+          "entities": "Entities",
+          "sensor": "Temperature Sensor"
+        }
       }
     }
   }
