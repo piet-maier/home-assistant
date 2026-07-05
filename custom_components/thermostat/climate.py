@@ -1,6 +1,7 @@
 import collections.abc
 import datetime
 import logging
+import statistics
 import typing
 
 from homeassistant.components.climate import ClimateEntity
@@ -214,7 +215,7 @@ class ThermostatEntity(GroupEntity, ClimateEntity):
                 self._attr_hvac_action = HVACAction.HEATING
 
         self._attr_current_temperature = reduce_attribute(
-            states, ATTR_CURRENT_TEMPERATURE
+            states, ATTR_CURRENT_TEMPERATURE, reduce=mean
         )
 
         self._attr_max_temp = reduce_attribute(
@@ -268,3 +269,7 @@ class ThermostatEntity(GroupEntity, ClimateEntity):
             True,
             self._context,
         )
+
+
+def mean(*data: float):
+    return round(statistics.fmean(data), 1)
