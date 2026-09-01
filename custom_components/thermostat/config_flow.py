@@ -1,6 +1,7 @@
 import typing
 
 import voluptuous
+from homeassistant.components.binary_sensor import BinarySensorDeviceClass
 from homeassistant.components.sensor.const import SensorDeviceClass
 from homeassistant.config_entries import ConfigFlow
 from homeassistant.const import CONF_ENTITIES, CONF_NAME, Platform
@@ -9,7 +10,7 @@ from homeassistant.helpers.selector import (
     EntitySelectorConfig,
 )
 
-from .const import DOMAIN, SENSOR
+from .const import DOMAIN, SENSOR, WINDOW
 
 
 class ThermostatConfigFlow(ConfigFlow, domain=DOMAIN):
@@ -34,6 +35,12 @@ class ThermostatConfigFlow(ConfigFlow, domain=DOMAIN):
                         EntitySelectorConfig(
                             domain=Platform.SENSOR,
                             device_class=SensorDeviceClass.TEMPERATURE,
+                        )
+                    ),
+                    WINDOW: EntitySelector(
+                        EntitySelectorConfig(
+                            domain=Platform.BINARY_SENSOR,
+                            device_class=BinarySensorDeviceClass.WINDOW,
                         )
                     ),
                 }
@@ -62,6 +69,12 @@ class ThermostatConfigFlow(ConfigFlow, domain=DOMAIN):
                         EntitySelectorConfig(
                             domain=Platform.SENSOR,
                             device_class=SensorDeviceClass.TEMPERATURE,
+                        )
+                    ),
+                    WINDOW: EntitySelector(
+                        EntitySelectorConfig(
+                            domain=Platform.BINARY_SENSOR,
+                            device_class=BinarySensorDeviceClass.WINDOW,
                         )
                     ),
                 }
