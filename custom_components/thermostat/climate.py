@@ -28,8 +28,7 @@ from homeassistant.const import (
     ATTR_TEMPERATURE,
     CONF_ENTITIES,
     CONF_NAME,
-    SERVICE_TURN_OFF,
-    SERVICE_TURN_ON,
+    STATE_ON,
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
     Platform,
@@ -44,7 +43,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.entity_registry import async_entries_for_device, async_get
 from homeassistant.helpers.event import async_call_later, async_track_state_change_event
 
-from .const import SENSOR
+from .const import SENSOR, WINDOW
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -60,6 +59,7 @@ async def async_setup_entry(
                 entry.data[CONF_NAME],
                 entry.data[CONF_ENTITIES],
                 entry.data.get(SENSOR),
+                entry.data.get(WINDOW),
             )
         ]
     )
@@ -74,8 +74,6 @@ class ThermostatEntity(GroupEntity, ClimateEntity):
         | ClimateEntityFeature.TURN_ON
     )
 
-    _attr_hvac_modes = [HVACMode.OFF, HVACMode.HEAT]
-
     def __init__(
         self,
         hass: HomeAssistant,
@@ -83,6 +81,7 @@ class ThermostatEntity(GroupEntity, ClimateEntity):
         name: str,
         entities: list[str],
         sensor: str | None,
+        window: str | None,
     ):
         self.hass = hass
 
@@ -91,23 +90,33 @@ class ThermostatEntity(GroupEntity, ClimateEntity):
 
         self._entity_ids = entities
 
+        self._attr_hvac_modes = [HVACMode.OFF, HVACMode.HEAT]
         self._attr_temperature_unit = self.hass.config.units.temperature_unit
 
         self._sensor_id = sensor
 
         self._sensor_callable: collections.abc.Callable[[], None] | None = None
 
+        self._window_id = window
+
+        self._window_callable: collections.abc.Callable[[], None] | None = None
+
     async def async_added_to_hass(self):
         await super().async_added_to_hass()
 
-        if self._sensor_id is None:
-            return
-
-        self.async_on_remove(
-            async_track_state_change_event(
-                self.hass, self._sensor_id, self._async_sensor_state_change
+        if self._sensor_id is not None:
+            self.async_on_remove(
+                async_track_state_change_event(
+                    self.hass, self._sensor_id, self._async_sensor_state_change
+                )
             )
-        )
+
+        if self._window_id is not None:
+            self.async_on_remove(
+                async_track_state_change_event(
+                    self.hass, self._window_id, self._async_window_state_change
+                )
+            )
 
     async def _async_sensor_state_change(
         self, state_change: Event[EventStateChangedData] | None = None
@@ -177,6 +186,55 @@ class ThermostatEntity(GroupEntity, ClimateEntity):
             self.hass, datetime.timedelta(minutes=15), action
         )
 
+    async def _async_window_state_change(
+        self, state_change: Event[EventStateChangedData]
+    ):
+        """This method turns all devices in the group on or off when a window is opened or closed and remains in that state for at least one minute.
+
+        The method is called when the value of the binary sensor entity referenced by `self._window_id` changes.
+
+        Args:
+            state_change:
+                This is the state change event.
+        """
+        if self._window_callable is not None:
+            self._window_callable()
+
+        if self._window_id is None:
+            return
+
+        state_object = state_change.data["new_state"]
+
+        if state_object is None:
+            return
+
+        state_string = state_object.state
+
+        if state_string in [STATE_UNAVAILABLE, STATE_UNKNOWN]:
+            return
+
+        state_bool = state_string == STATE_ON
+
+        mode = HVACMode.OFF if state_bool else HVACMode.HEAT
+
+        if self.hvac_mode == mode:
+            return
+
+        async def action(_: datetime.datetime):
+            _LOGGER.debug(
+                'Setting HVAC mode of "%s" to %s because of a window state change...',
+                self._attr_name,
+                mode,
+            )
+
+            await self._async_call_service_action(
+                SERVICE_SET_HVAC_MODE, {ATTR_HVAC_MODE: mode}
+            )
+
+        self._window_callable = async_call_later(
+            self.hass, datetime.timedelta(minutes=1), action
+        )
+
     @callback
     def async_update_group_state(self):
         states = list(self._entity_states())
@@ -236,19 +294,22 @@ class ThermostatEntity(GroupEntity, ClimateEntity):
                 yield entity_state
 
     async def async_set_hvac_mode(self, hvac_mode: HVACMode):
+        if (
+            hvac_mode == HVACMode.HEAT
+            and self._window_id is not None
+            and self.hass.states.is_state(self._window_id, STATE_ON)
+        ):
+            return
+
         data = {ATTR_HVAC_MODE: hvac_mode}
 
         await self._async_call_service_action(SERVICE_SET_HVAC_MODE, data)
 
     async def async_turn_on(self):
-        data = {ATTR_HVAC_MODE: HVACMode.HEAT}
-
-        await self._async_call_service_action(SERVICE_TURN_ON, data)
+        await self.async_set_hvac_mode(HVACMode.HEAT)
 
     async def async_turn_off(self):
-        data = {ATTR_HVAC_MODE: HVACMode.OFF}
-
-        await self._async_call_service_action(SERVICE_TURN_OFF, data)
+        await self.async_set_hvac_mode(HVACMode.OFF)
 
     async def async_toggle(self):
         if self.state != HVACMode.OFF:
@@ -257,6 +318,9 @@ class ThermostatEntity(GroupEntity, ClimateEntity):
             await self.async_turn_on()
 
     async def async_set_temperature(self, **kwargs: typing.Any):
+        if self._window_id and self.hass.states.is_state(self._window_id, STATE_ON):
+            return
+
         data = {ATTR_TEMPERATURE: kwargs[ATTR_TEMPERATURE]}
 
         await self._async_call_service_action(SERVICE_SET_TEMPERATURE, data)
